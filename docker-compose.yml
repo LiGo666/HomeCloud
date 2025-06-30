@@ -5,7 +5,6 @@ services:
 #  Network and reverse proxy  #
 #                             #
 ###############################
-
  
   traefik:
     image: traefik:latest
