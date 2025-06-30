@@ -1,0 +1,302 @@
+version: "3"
+
+networks:
+  stack:
+  proxy:
+    external: true
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+
+services:
+  traefik:
+    container_name: traefik
+    image: traefik:latest
+    restart: unless-stopped
+    command:
+      - --api.insecure=true
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+      - --certificatesresolvers.letsencrypt.acme.email=admin@example.com
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+    ports:
+      - "80:80"
+      - "443:443"
+      - "127.0.0.1:9999:8080"
+      - "127.0.0.1:8082:8082"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/letsencrypt:/letsencrypt
+    networks:
+      - proxy
+  
+  master:
+    container_name: master
+    restart: unless-stopped
+    build:
+      context: ./master
+    networks:
+      - stack
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+  telegram-webhook:
+    container_name: telegram-webhook
+    restart: unless-stopped
+    image: python:3.11-slim
+    command: >
+      sh -c "pip install flask requests && python -c \"
+      from flask import Flask, request;
+      import requests;
+      import os;
+      import json;
+      
+      app = Flask(__name__);
+      
+      @app.route(\"/webhook\", methods=[\"POST\"])
+      def webhook():
+          data = request.json;
+          url = \"http://telegram-send:8432/send\";
+          response = requests.post(url, json=data);
+          return response.text;
+          
+      @app.route(\"/health\")
+      def health():
+          return \\"OK\\";
+          
+      if __name__ == \\"__main__\\":
+          app.run(host=\\"0.0.0.0\\", port=8433)
+      \"" 
+    networks:
+      - stack
+
+  telegram-send:
+    container_name: telegram-send
+    restart: unless-stopped
+    image: python:3.11-slim
+    command: >
+      sh -c "pip install flask requests python-telegram-bot==13.7 && python -c \"
+      from flask import Flask, request;
+      import telegram;
+      import os;
+      import json;
+      
+      app = Flask(__name__);
+      bot = telegram.Bot(token=\"${TELEGRAM_BOT_TOKEN}\");
+      
+      @app.route(\"/send\", methods=[\"POST\"])
+      def send():
+          data = request.json;
+          message = data.get(\"message\", \\"No message provided\\");
+          chat_id = data.get(\"chat_id\", \"${TELEGRAM_CHAT_ID}\");
+          
+          bot.send_message(chat_id=chat_id, text=message, parse_mode=telegram.ParseMode.HTML);
+          return \\"OK\\";
+          
+      @app.route(\"/health\")
+      def health():
+          return \\"OK\\";
+          
+      if __name__ == \\"__main__\\":
+          app.run(host=\\"0.0.0.0\\", port=8432)
+      \"" 
+    ports:
+      - "127.0.0.1:8432:8432"
+    networks:
+      - stack
+
+  redis:
+    container_name: redis
+    image: redis:7-alpine
+    command: redis-server --requirepass ${STRONG_PASSWORD_INTERNAL}
+    restart: unless-stopped
+    networks:
+      - stack
+
+  redis-commander:
+    container_name: redis-commander
+    image: rediscommander/redis-commander:latest
+    restart: unless-stopped
+    environment:
+      - REDIS_HOSTS=local:redis:6379:0:${STRONG_PASSWORD_INTERNAL}
+      - HTTP_USER=${RANDOM_USERNAME_INTERNAL}
+      - HTTP_PASSWORD=${STRONG_PASSWORD_INTERNAL}
+    ports:
+      - "127.0.0.1:5466:8081"
+    networks:
+      - stack
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  mongodb:
+    container_name: mongodb
+    image: mongo:6
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${RANDOM_USERNAME_INTERNAL}
+      - MONGO_INITDB_ROOT_PASSWORD=${STRONG_PASSWORD_INTERNAL}
+    networks:
+      - stack
+    volumes:
+      - ./mongodb/data:/data/db
+      - ./mongodb/logs:/var/log/mongodb
+
+  mongo-express:
+    container_name: mongo-express
+    image: mongo-express:latest
+    restart: unless-stopped
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=${RANDOM_USERNAME_INTERNAL}
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=${STRONG_PASSWORD_INTERNAL}
+      - ME_CONFIG_MONGODB_URL=mongodb://${RANDOM_USERNAME_INTERNAL}:${STRONG_PASSWORD_INTERNAL}@mongodb:27017/
+      - ME_CONFIG_BASICAUTH_USERNAME=${RANDOM_USERNAME_INTERNAL}
+      - ME_CONFIG_BASICAUTH_PASSWORD=${STRONG_PASSWORD_INTERNAL}
+    ports:
+      - "127.0.0.1:9546:8081"
+    networks:
+      - stack
+    depends_on:
+      - mongodb
+
+  mariadb:
+    container_name: mariadb
+    image: mariadb:10.11
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${STRONG_PASSWORD_INTERNAL}
+    networks:
+      - stack
+    volumes:
+      - ./mariadb/data:/var/lib/mysql
+
+  mariadb-phpmyadmin:
+    container_name: mariadb-phpmyadmin
+    image: phpmyadmin/phpmyadmin:latest
+    restart: unless-stopped
+    environment:
+      - PMA_HOST=mariadb
+      - PMA_PORT=3306
+      - PMA_USER=root
+      - PMA_PASSWORD=${STRONG_PASSWORD_INTERNAL}
+    ports:
+      - "127.0.0.1:8431:80"
+    networks:
+      - stack
+    depends_on:
+      - mariadb
+
+  grafana:
+    container_name: grafana
+    restart: unless-stopped
+    working_dir: /monitoring/grafana
+    image: grafana/grafana:latest
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    ports:
+      - "127.0.0.1:7001:3000"
+    networks:
+      - stack
+    depends_on:
+      - prometheus
+      - loki
+
+  prometheus:
+    container_name: prometheus
+    restart: unless-stopped
+    working_dir: /monitoring/prometheus
+    image: prom/prometheus:latest
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.console.libraries=/etc/prometheus/console_libraries
+      - --web.console.templates=/etc/prometheus/consoles
+      - --web.enable-lifecycle
+    ports:
+      - "127.0.0.1:7002:9090"
+    networks:
+      - stack
+    depends_on:
+      - node-exporter
+      
+  loki:
+    container_name: loki
+    restart: unless-stopped
+    image: grafana/loki:latest
+    volumes:
+      - ./monitoring/loki/loki-config.yaml:/etc/loki/local-config.yaml
+      - loki_data:/data/loki
+    ports:
+      - "127.0.0.1:7003:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - stack
+
+  node-exporter:
+    container_name: node-exporter
+    restart: unless-stopped
+    image: prom/node-exporter:latest
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    ports:
+      - "127.0.0.1:7004:9100"
+    networks:
+      - stack
+
+  promtail:
+    container_name: promtail
+    restart: unless-stopped
+    image: grafana/promtail:latest
+    volumes:
+      - ./monitoring/promtail/promtail-config.yaml:/etc/promtail/config.yaml
+      - /var/log:/var/log:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "127.0.0.1:7005:9080"
+    command: -config.file=/etc/promtail/config.yaml
+    depends_on:
+      - loki
+    networks:
+      - stack
+  
+  n8n:
+    container_name: n8n
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${RANDOM_USERNAME_INTERNAL}
+      - N8N_BASIC_AUTH_PASSWORD=${STRONG_PASSWORD_INTERNAL}
+    volumes:
+      - ./n8n/data:/home/node/.n8n
+    networks:
+      - stack

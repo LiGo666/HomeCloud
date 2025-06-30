@@ -1,0 +1,9 @@
+jellyfin/**
+nextcloud/**
+cdn/**
+monitoring/**
+traefik/**
+telegram/**
+n8n/**
+RESTORE/**
+.env

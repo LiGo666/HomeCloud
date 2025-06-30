@@ -1,0 +1,38 @@
+services:
+
+###############################
+#                             #
+#  Network and reverse proxy  #
+#                             #
+###############################
+
+
+  master:
+    container_name: master
+    restart: unless-stopped
+    working_dir: /traefik
+    build:
+      context: ./traefik
+      dockerfile: dockerfile/master.dockerfile
+    volumes:
+      - ./traefik/update-dns.sh:/app/update-dns.sh:ro
+      - ./traefik/watcher.sh:/app/watcher.sh:ro
+      - ./traefik/dns.env:/app/dns.env:ro
+      - ./traefik/aws.env:/app/aws.env:ro
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+    networks:
+      - stack
+
+
+###############################
+#                             #
+#  Network and reverse proxy  #
+#                             #
+###############################
+
+networks:
+  stack:
+    external: true
