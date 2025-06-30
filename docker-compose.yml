@@ -113,6 +113,37 @@ services:
     networks:
       - stack
 
+  mongodb:
+    image: mongo:6
+    container_name: mongodb
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${RANDOM_USERNAME_INTERNAL}
+      - MONGO_INITDB_ROOT_PASSWORD=${STRONG_PASSWORD_INTERNAL}
+    ports:
+      - "127.0.0.1:6003:6003"
+    command: ["--port", "6003"]
+    volumes:
+      - mongodb_db:/data/db
+    networks:
+      - stack
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express
+    restart: unless-stopped
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+      - ME_CONFIG_MONGODB_PORT=6003
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=${RANDOM_USERNAME_INTERNAL}
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=${STRONG_PASSWORD_INTERNAL}
+      - ME_CONFIG_SITE_BASEURL=/
+    ports:
+      - "127.0.0.1:6013:8081"
+    depends_on:
+      - mongodb
+    networks:
+      - stack
 
 
 ###############################
@@ -137,3 +168,4 @@ volumes:
   traefik_letsencrypt:
   redis_db:
   mariadb_db:
+  mongodb_db:
