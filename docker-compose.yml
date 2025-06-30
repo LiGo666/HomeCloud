@@ -6,9 +6,36 @@ services:
 #                             #
 ###############################
 
+ 
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    restart: unless-stopped
+    working_dir: /traefik
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+    command:
+      - "--configFile=/etc/traefik/traefik.yml"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "127.0.0.1:9999:8080"
+      - "127.0.0.1:8082:8082"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_letsencrypt:/letsencrypt
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml
+    networks:
+      - proxy
+      - stack
+    depends_on:
+      dns-refresher:
+        condition: service_healthy
 
-  master:
-    container_name: master
+  dns-refresher:
+    container_name: dns-refresher
     restart: unless-stopped
     working_dir: /traefik
     build:
@@ -26,6 +53,22 @@ services:
     networks:
       - stack
 
+  
+  cert-sync:
+    container_name: cert-sync
+    image: alpine:latest
+    restart: unless-stopped
+    entrypoint: >
+      sh -c "apk add --no-cache jq coreutils openssl &&
+             while true; do /extract-certs.sh && sleep 1800; done"
+    volumes:
+      - traefik_letsencrypt:/letsencrypt:ro
+      - traefik_certs:/certs:rw
+      - ./traefik/extract-certs.sh:/extract-certs.sh:ro,exec
+    networks:
+      - stack
+
+
 
 ###############################
 #                             #
@@ -36,3 +79,15 @@ services:
 networks:
   stack:
     external: true
+  proxy:
+    external: true
+
+###############################
+#                             #
+#  Volumes                    #
+#                             #
+###############################
+
+volumes:
+  traefik_letsencrypt:
+  traefik_certs:

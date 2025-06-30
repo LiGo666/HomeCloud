@@ -1,0 +1,55 @@
+services:
+  master:
+    build:
+      context: .
+      dockerfile: dockerfile/master.dockerfile
+    container_name: master
+    restart: unless-stopped
+    # Direct file mounting for credentials and configuration
+    volumes:
+      - ./update-dns.sh:/app/update-dns.sh:ro
+      - ./watcher.sh:/app/watcher.sh:ro
+      - ./dns.env:/app/dns.env:ro
+      - ./aws.env:/app/aws.env:ro
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    restart: unless-stopped
+    env_file:
+      - ./aws.env
+    command:
+      - "--configFile=/etc/traefik/traefik.yml"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "127.0.0.1:9999:8080"
+      - "127.0.0.1:8082:8082"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+      - ./traefik.yml:/etc/traefik/traefik.yml
+    networks:
+      - proxy
+      - monitoring
+  
+  cert-sync:
+    container_name: cert-sync
+    image: alpine:latest
+    restart: unless-stopped
+    entrypoint: >
+      sh -c "apk add --no-cache jq coreutils openssl &&
+             while true; do /extract-certs.sh && sleep 1800; done"
+    volumes:
+      - letsencrypt:/letsencrypt:ro
+      - certs:/certs
+      - ./extract-certs.sh:/extract-certs.sh:ro
+
+networks:
+  proxy:
+    external: true
+  monitoring: 
+    external: true
+
+volumes:
+  letsencrypt:
+  certs:
