@@ -53,6 +53,33 @@ services:
   
 ###############################
 #                             #
+#  Databases                  #
+#                             #
+###############################
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: unless-stopped
+    networks:
+      - stack
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: redis-commander
+    restart: unless-stopped
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "127.0.0.1:6001:8081"
+    depends_on:
+      - redis
+    networks:
+      - stack
+
+
+###############################
+#                             #
 #  Network and reverse proxy  #
 #                             #
 ###############################
