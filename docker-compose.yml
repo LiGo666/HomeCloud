@@ -67,6 +67,9 @@ services:
       - MYSQL_USER=${RANDOM_USERNAME_INTERNAL}
       - MYSQL_PASSWORD=${STRONG_PASSWORD_INTERNAL}
       - MYSQL_DATABASE=defaultdb
+    ports:
+      - "127.0.0.1:6002:6002"
+    command: ["--port=6002"]
     volumes:
       - mariadb_db:/var/lib/mysql
     networks:
@@ -78,11 +81,11 @@ services:
     restart: unless-stopped
     environment:
       - PMA_HOST=mariadb
-      - PMA_PORT=3306
+      - PMA_PORT=6002
       - PMA_USER=${RANDOM_USERNAME_INTERNAL}
       - PMA_PASSWORD=${STRONG_PASSWORD_INTERNAL}
     ports:
-      - "127.0.0.1:3307:80"
+      - "127.0.0.1:6012:80"
     depends_on:
       - mariadb
     networks:
