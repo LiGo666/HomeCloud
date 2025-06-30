@@ -112,7 +112,7 @@ services:
       - REDIS_DEFAULT_USER=${RANDOM_USERNAME_INTERNAL}
     ports:
       - "127.0.0.1:6011:6011"
-    command: ["node", "./bin/redis-commander", "--port", "6011"]
+    command: ["node", "./bin/redis-commander", "--port", "6011", "--redis-host", "redis", "--redis-port", "6001", "--redis-password", "${STRONG_PASSWORD_INTERNAL}"]
     depends_on:
       - redis
     networks:
