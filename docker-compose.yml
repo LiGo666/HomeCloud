@@ -76,7 +76,6 @@ services:
     environment:
       - REDIS_HOSTS=redis:6001
       - REDIS_PASSWORD=${STRONG_PASSWORD_INTERNAL}
-      - REDIS_USERNAME=${RANDOM_USERNAME_INTERNAL}
     ports:
       - "127.0.0.1:6011:8081"
     depends_on:
