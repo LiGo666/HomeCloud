@@ -92,12 +92,9 @@ services:
     image: redis:latest
     container_name: redis
     restart: unless-stopped
-    environment:
-      - REDIS_PASSWORD=${STRONG_PASSWORD_INTERNAL}
-      - REDIS_DEFAULT_USER=${RANDOM_USERNAME_INTERNAL}
     ports:
       - "127.0.0.1:6001:6001"
-    command: ["redis-server", "--port", "6001"]
+    command: ["redis-server", "--port", "6001", "--requirepass", "${STRONG_PASSWORD_INTERNAL}"]
     networks:
       - stack
 
@@ -105,11 +102,6 @@ services:
     image: rediscommander/redis-commander:latest
     container_name: redis-commander
     restart: unless-stopped
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6001
-      - REDIS_PASSWORD=${STRONG_PASSWORD_INTERNAL}
-      - REDIS_DEFAULT_USER=${RANDOM_USERNAME_INTERNAL}
     ports:
       - "127.0.0.1:6011:6011"
     command: ["node", "./bin/redis-commander", "--port", "6011", "--redis-host", "redis", "--redis-port", "6001", "--redis-password", "${STRONG_PASSWORD_INTERNAL}"]
