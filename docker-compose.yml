@@ -61,6 +61,11 @@ services:
     image: redis:latest
     container_name: redis
     restart: unless-stopped
+    environment:
+      - REDIS_PASSWORD=${STRONG_PASSWORD_INTERNAL}
+    ports:
+      - "127.0.0.1:6001:6001"
+    command: ["redis-server", "--port", "6001"]
     networks:
       - stack
 
@@ -69,7 +74,9 @@ services:
     container_name: redis-commander
     restart: unless-stopped
     environment:
-      - REDIS_HOSTS=local:redis:6379
+      - REDIS_HOSTS=local:redis:6001
+      - REDIS_PASSWORD=${STRONG_PASSWORD_INTERNAL}
+      - REDIS_USERNAME=${RANDOM_USERNAME_INTERNAL}
     ports:
       - "127.0.0.1:6001:8081"
     depends_on:
