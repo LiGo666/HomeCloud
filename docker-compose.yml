@@ -110,9 +110,9 @@ services:
       - REDIS_PORT=6001
       - REDIS_PASSWORD=${STRONG_PASSWORD_INTERNAL}
       - REDIS_DEFAULT_USER=${RANDOM_USERNAME_INTERNAL}
-      - HTTP_PORT=6011
     ports:
       - "127.0.0.1:6011:8081"
+    command: ["redis-commander", "--port", "6011"]
     depends_on:
       - redis
     networks:
