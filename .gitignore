@@ -6,3 +6,7 @@ telegram/**
 n8n/**
 RESTORE/**
 .env
+
+# Environment files
+.env*
+n8n/.env
