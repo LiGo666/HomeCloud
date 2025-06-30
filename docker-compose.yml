@@ -78,7 +78,7 @@ services:
       - REDIS_PASSWORD=${STRONG_PASSWORD_INTERNAL}
       - REDIS_USERNAME=${RANDOM_USERNAME_INTERNAL}
     ports:
-      - "127.0.0.1:6001:8081"
+      - "127.0.0.1:6011:8081"
     depends_on:
       - redis
     networks:
