@@ -162,20 +162,14 @@ services:
     networks:
       - stack
 
-  postgres-pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: postgres-pgadmin
+  postgres-pgweb:
+    image: sosedoff/pgweb
+    container_name: postgres-pgweb
     restart: unless-stopped
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=${RANDOM_EMAIL_INTERNAL}
-      - PGADMIN_DEFAULT_PASSWORD=${STRONG_PASSWORD_INTERNAL}
-      - PGADMIN_LISTEN_PORT=6014
-      - PGADMIN_SERVER_JSON_FILE=/pgadmin4/servers.json
     ports:
-      - "127.0.0.1:6014:6014"
-    volumes:
-      - ./pgadmin/servers.json:/pgadmin4/servers.json
-      - ./pgadmin/pgpass:/pgpass
+      - "127.0.0.1:6014:8081"
+    environment:
+      - PGWEB_DATABASE_URL=postgres://${RANDOM_USERNAME_INTERNAL}:${STRONG_PASSWORD_INTERNAL}@postgres:6004/defaultdb?sslmode=disable
     depends_on:
       - postgres
     networks:
