@@ -19,10 +19,8 @@ services:
     command:
       - "--configFile=/etc/traefik/traefik.yml"
     ports:
-      - "80:80"
       - "443:443"
-      - "127.0.0.1:9999:8080"
-      - "127.0.0.1:8082:8082"
+      - "127.0.0.1:4001:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik_letsencrypt:/letsencrypt
@@ -54,22 +52,6 @@ services:
       - stack
 
   
-  cert-sync:
-    container_name: cert-sync
-    image: alpine:latest
-    restart: unless-stopped
-    entrypoint: >
-      sh -c "apk add --no-cache jq coreutils openssl &&
-             while true; do /extract-certs.sh && sleep 1800; done"
-    volumes:
-      - traefik_letsencrypt:/letsencrypt:ro
-      - traefik_certs:/certs:rw
-      - ./traefik/extract-certs.sh:/extract-certs.sh:ro,exec
-    networks:
-      - stack
-
-
-
 ###############################
 #                             #
 #  Network and reverse proxy  #
@@ -90,4 +72,3 @@ networks:
 
 volumes:
   traefik_letsencrypt:
-  traefik_certs:
