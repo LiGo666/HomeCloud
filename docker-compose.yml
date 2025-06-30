@@ -57,12 +57,44 @@ services:
 #                             #
 ###############################
 
+  mariadb:
+    image: mariadb:10.11
+    container_name: mariadb
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${STRONG_PASSWORD_INTERNAL}
+      - MYSQL_ROOT_HOST=%
+      - MYSQL_USER=${RANDOM_USERNAME_INTERNAL}
+      - MYSQL_PASSWORD=${STRONG_PASSWORD_INTERNAL}
+      - MYSQL_DATABASE=defaultdb
+    volumes:
+      - mariadb_db:/var/lib/mysql
+    networks:
+      - stack
+
+  mariadb-phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: mariadb-phpmyadmin
+    restart: unless-stopped
+    environment:
+      - PMA_HOST=mariadb
+      - PMA_PORT=3306
+      - PMA_USER=${RANDOM_USERNAME_INTERNAL}
+      - PMA_PASSWORD=${STRONG_PASSWORD_INTERNAL}
+    ports:
+      - "127.0.0.1:3307:80"
+    depends_on:
+      - mariadb
+    networks:
+      - stack
+
   redis:
     image: redis:latest
     container_name: redis
     restart: unless-stopped
     environment:
       - REDIS_PASSWORD=${STRONG_PASSWORD_INTERNAL}
+      - REDIS_DEFAULT_USER=${RANDOM_USERNAME_INTERNAL}
     ports:
       - "127.0.0.1:6001:6001"
     command: ["redis-server", "--port", "6001"]
@@ -74,14 +106,18 @@ services:
     container_name: redis-commander
     restart: unless-stopped
     environment:
-      - REDIS_HOSTS=redis:6001
+      - REDIS_HOST=redis
+      - REDIS_PORT=6001
       - REDIS_PASSWORD=${STRONG_PASSWORD_INTERNAL}
+      - REDIS_DEFAULT_USER=${RANDOM_USERNAME_INTERNAL}
+      - HTTP_PORT=6011
     ports:
       - "127.0.0.1:6011:8081"
     depends_on:
       - redis
     networks:
       - stack
+
 
 
 ###############################
@@ -105,3 +141,4 @@ networks:
 volumes:
   traefik_letsencrypt:
   redis_db:
+  mariadb_db:
