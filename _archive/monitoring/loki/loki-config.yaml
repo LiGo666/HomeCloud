@@ -1,0 +1,28 @@
+# Port mappings for monitoring stack:
+# Grafana:       7001 (internal: 3000)
+# Prometheus:    7002 (internal: 9090)
+# Loki:          7003 (internal: 3100)
+# Node-exporter: 7004 (internal: 9100)
+# Promtail:      7005 (internal: 9080)
+
+auth_enabled: false
+
+server:
+  http_listen_port: 7003
+
+storage:
+  filesystem:
+    chunks_directory: /tmp/loki/chunks
+
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: boltdb-shipper
+      object_store: filesystem
+      schema: v11
+      index:
+        prefix: index_
+        period: 24h
+
+limits_config:
+  retention_period: 24h

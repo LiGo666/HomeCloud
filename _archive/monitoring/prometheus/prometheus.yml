@@ -1,0 +1,32 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# Port mappings for monitoring stack:
+# Grafana:       7001 (internal: 3000)
+# Prometheus:    7002 (internal: 9090)
+# Loki:          7003 (internal: 3100)
+# Node-exporter: 7004 (internal: 9100)
+# Promtail:      7005 (internal: 9080)
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:7002"]
+
+  - job_name: "node_exporter"
+    static_configs:
+      - targets: ["node-exporter:7004"]
+
+  - job_name: "loki"
+    static_configs:
+      - targets: ["loki:7003"]
+
+  - job_name: "promtail"
+    static_configs:
+      - targets: ["promtail:7005"]
+
+  # Add Docker metrics
+  - job_name: "docker"
+    static_configs:
+      - targets: ["172.17.0.1:9323"]  # Docker daemon metrics if enabled
