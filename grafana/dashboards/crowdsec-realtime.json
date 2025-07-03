@@ -1,0 +1,122 @@
+{
+  "title": "CrowdSec Realtime Threats",
+  "uid": "crowdsec-realtime",
+  "schemaVersion": 37,
+  "version": 1,
+  "refresh": "5s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "type": "table",
+      "title": "Active Bans (live)",
+      "id": 1,
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum by (source_ip, country_code, as) (cs_decisions_count)",
+          "legendFormat": "{{source_ip}} | {{country_code}} | {{as}}",
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "sortBy",
+          "options": {
+            "field": "Value",
+            "desc": true
+          }
+        }
+      ],
+      "options": {
+        "showHeader": true
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "type": "barchart",
+      "title": "Top Scenarios (24h)",
+      "id": 2,
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "topk(10, increase(cs_decisions_new_total[24h]))",
+          "legendFormat": "{{scenario}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal"
+      },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 10 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Decision Rate (5m)",
+      "id": 3,
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(cs_decisions_new_total[5m])",
+          "legendFormat": "Decisions/s",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 10 }
+    },
+    {
+      "type": "geomap",
+      "title": "Hotspots (24h)",
+      "id": 4,
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum by (country_code) (increase(cs_decisions_new_total[24h]))",
+          "legendFormat": "{{country_code}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "view": {
+          "id": "world"
+        },
+        "layers": [
+          {
+            "type": "regions",
+            "name": "Countries",
+            "config": {
+              "location":"country_code"
+            }
+          }
+        ]
+      },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 19 }
+    }
+  ]
+}
