@@ -52,16 +52,16 @@ services:
       - crowdsec_config:/etc/crowdsec
       - /var/log:/var/log:ro
     networks:
-      - proxy
       - stack
-    expose:
-      - "8080"
     healthcheck:
       test: ["CMD", "cscli", "metrics"]
       interval: 1m
       timeout: 10s
       retries: 3
       start_period: 20s
+    depends_on:
+      traefik:
+        condition: service_healthy
 
   dns-refresher:
     container_name: dns-refresher
@@ -207,6 +207,18 @@ services:
       - mongodb
     networks:
       - stack
+
+
+############################
+#                          #
+#  Monitoring and logging  #
+#                          #
+############################
+
+# ADD Grafana:       7001 (internal: 3000)
+# ADD Prometheus:    7002 (internal: 9090)
+
+
 
 
 ###############################

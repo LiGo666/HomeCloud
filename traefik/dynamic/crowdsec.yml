@@ -5,6 +5,6 @@ http:
         enabled: true
         crowdsecLapiKey: "${CROWDSEC_BOUNCER_KEY}"
         crowdsecLapiScheme: "http"
-        crowdsecLapiHost: "crowdsec:8080"
+        crowdsecLapiHost: "crowdsec:4002"
         logLevel: "INFO"
         metricsUpdateIntervalSeconds: 600
