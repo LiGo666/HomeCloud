@@ -12,3 +12,4 @@ _secrets/**
 .env*
 n8n/.env
 _secrets/AWS_CREDENTIALS
+
