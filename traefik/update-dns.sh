@@ -34,17 +34,19 @@ fi
 
 
 
+# Load AWS credentials from Docker secrets
+if [ -f "/run/secrets/AWS_CREDENTIALS" ]; then
+  debug_log "Loading AWS credentials from Docker secrets"
+  source /run/secrets/AWS_CREDENTIALS
+fi
+
 # Verify AWS credentials are loaded
 if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
-  ERROR_MSG="AWS credentials not found. Ensure that they are set as environment variables."
+  ERROR_MSG="AWS credentials not found. Ensure they are set as environment variables or in /run/secrets/AWS_CREDENTIALS"
   log "ERROR: $ERROR_MSG"
   exit 1
 fi
 
-# Explicitly export AWS credentials for AWS CLI
-export AWS_ACCESS_KEY_ID
-export AWS_SECRET_ACCESS_KEY
-export AWS_REGION=${AWS_REGION:-"eu-central-1"}
 
 # Debug AWS credentials (without showing secret)
 debug_log "Using AWS credentials: AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:0:5}... AWS_REGION=${AWS_REGION}"

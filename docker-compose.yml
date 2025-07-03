@@ -10,23 +10,26 @@ services:
     image: traefik:latest
     container_name: traefik
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     working_dir: /traefik
-    environment:
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_REGION=${AWS_REGION}
-    command:
-      - "--configFile=/etc/traefik/traefik.yml"
+    networks:
+      - proxy
+      - stack
     ports:
+      - 80:80
       - "443:443"
       - "127.0.0.1:4001:8080"
+    secrets:
+      - AWS_CREDENTIALS
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik_letsencrypt:/letsencrypt
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml
-    networks:
-      - proxy
-      - stack
+    command: ["--configFile=/etc/traefik/traefik.yml"]
+    environment:
+      - AWS_SHARED_CREDENTIALS_FILE=/run/secrets/AWS_CREDENTIALS
+      - AWS_REGION=${AWS_REGION}
     depends_on:
       dns-refresher:
         condition: service_healthy
@@ -38,14 +41,14 @@ services:
     build:
       context: ./traefik
       dockerfile: dockerfile/master.dockerfile
+    secrets:
+      - AWS_CREDENTIALS
     volumes:
       - ./traefik/update-dns.sh:/app/update-dns.sh:ro
       - ./traefik/watcher.sh:/app/watcher.sh:ro
       - ./traefik/dns.env:/app/dns.env:ro
       - ./traefik/aws.env:/app/aws.env:ro
     environment:
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_REGION=${AWS_REGION}
     networks:
       - stack
@@ -61,11 +64,12 @@ services:
     image: mariadb:10.11
     container_name: mariadb
     restart: unless-stopped
+    secrets:
+      - STRONG_PASSWORD
     environment:
-      - MYSQL_ROOT_PASSWORD=${STRONG_PASSWORD_INTERNAL}
-      - MYSQL_ROOT_HOST=%
-      - MYSQL_USER=${RANDOM_USERNAME_INTERNAL}
-      - MYSQL_PASSWORD=${STRONG_PASSWORD_INTERNAL}
+      - MYSQL_ROOT_PASSWORD_FILE=/run/secrets/STRONG_PASSWORD
+      - MYSQL_PASSWORD_FILE=/run/secrets/STRONG_PASSWORD
+      - MYSQL_USER=${RANDOM_USERNAME}
       - MYSQL_DATABASE=defaultdb
     ports:
       - "127.0.0.1:6002:6002"
@@ -75,21 +79,6 @@ services:
     networks:
       - stack
 
-  mariadb-phpmyadmin:
-    image: phpmyadmin/phpmyadmin:latest
-    container_name: mariadb-phpmyadmin
-    restart: unless-stopped
-    environment:
-      - PMA_HOST=mariadb
-      - PMA_PORT=6002
-      - PMA_USER=${RANDOM_USERNAME_INTERNAL}
-      - PMA_PASSWORD=${STRONG_PASSWORD_INTERNAL}
-    ports:
-      - "127.0.0.1:6012:80"
-    depends_on:
-      - mariadb
-    networks:
-      - stack
 
   redis:
     image: redis:latest
@@ -101,17 +90,6 @@ services:
     networks:
       - stack
 
-  redis-commander:
-    image: rediscommander/redis-commander:latest
-    container_name: redis-commander
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:6011:6011"
-    command: ["node", "./bin/redis-commander", "--port", "6011", "--redis-host", "redis", "--redis-port", "6001", "--redis-password", "${STRONG_PASSWORD_INTERNAL}"]
-    depends_on:
-      - redis
-    networks:
-      - stack
 
   mongodb:
     image: mongo:6
@@ -127,22 +105,6 @@ services:
     command: ["--port", "6003"]
     volumes:
       - mongodb_db:/data/db
-    networks:
-      - stack
-
-  mongo-express:
-    image: mongo-express:latest
-    container_name: mongo-express
-    restart: unless-stopped
-    environment:
-    - ME_CONFIG_MONGODB_URL=mongodb://${RANDOM_USERNAME_INTERNAL}:${STRONG_PASSWORD_INTERNAL}@mongodb:6003/
-    - ME_CONFIG_BASICAUTH_USERNAME=${RANDOM_USERNAME_INTERNAL}
-    - ME_CONFIG_BASICAUTH_PASSWORD=${STRONG_PASSWORD_INTERNAL}
-    - ME_CONFIG_SITE_BASEURL=/
-    ports:
-      - "127.0.0.1:6013:8081"
-    depends_on:
-      - mongodb
     networks:
       - stack
       
@@ -162,16 +124,52 @@ services:
     networks:
       - stack
 
-  postgres-pgweb:
-    image: sosedoff/pgweb
-    container_name: postgres-pgweb
+###############################
+#                             #
+#    Database Management      #
+#                             #
+###############################
+
+
+  adminer:
+    profiles: ["database-management"]
+    image: adminer
+    container_name: adminer
     restart: unless-stopped
     ports:
-      - "127.0.0.1:6014:8081"
+      - "127.0.0.1:6012:8080"
     environment:
-      - PGWEB_DATABASE_URL=postgres://${RANDOM_USERNAME_INTERNAL}:${STRONG_PASSWORD_INTERNAL}@postgres:6004/defaultdb?sslmode=disable
+      - ADMINER_DEFAULT_SERVER=mariadb
+    networks:
+      - stack
+
+  redis-commander:
+    profiles: ["database-management"]
+    image: rediscommander/redis-commander:latest
+    container_name: redis-commander
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6011:6011"
+    command: ["node", "./bin/redis-commander", "--port", "6011", "--redis-host", "redis", "--redis-port", "6001", "--redis-password", "${STRONG_PASSWORD_INTERNAL}"]
     depends_on:
-      - postgres
+      - redis
+    networks:
+      - stack
+
+  mongo-express:
+    profiles: ["database-management"]
+    image: mongo-express:latest
+    container_name: mongo-express
+    restart: unless-stopped
+    environment:
+    - ME_CONFIG_MONGODB_URL=mongodb://${RANDOM_USERNAME_INTERNAL}:${STRONG_PASSWORD_INTERNAL}@mongodb:6003/
+    - ME_CONFIG_BASICAUTH_USERNAME=${RANDOM_USERNAME_INTERNAL}
+    - ME_CONFIG_BASICAUTH_PASSWORD=${STRONG_PASSWORD_INTERNAL}
+    - ME_CONFIG_SITE_BASEURL=/
+    ports:
+      - "127.0.0.1:6013:8081"
+    depends_on:
+      - mongodb
     networks:
       - stack
 
@@ -200,3 +198,21 @@ volumes:
   mariadb_db:
   mongodb_db:
   postgres_db:
+
+###############################
+#                             #
+#  Secrets                    #
+#                             #
+###############################
+
+secrets:
+  AWS_CREDENTIALS:
+    file: ./_secrets/AWS_CREDENTIALS
+  STRONG_PASSWORD:
+    file: ./_secrets/STRONG_PASSWORD
+  STRONG_PASSWORD_SPECIALCHARACTERS:
+    file: ./_secrets/STRONG_PASSWORD_SPECIALCHARACTERS
+  TELEGRAM_BOT_TOKEN:
+    file: ./_secrets/TELEGRAM_BOT_TOKEN
+  TELEGRAM_WEBHOOK_SECRET:
+    file: ./_secrets/TELEGRAM_WEBHOOK_SECRET
