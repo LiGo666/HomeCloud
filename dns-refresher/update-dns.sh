@@ -193,6 +193,10 @@ for SUB in "${HOSTS[@]}"; do
 
   if [ "$CURRENT_IP" == "$PUBLIC_IP" ]; then
     debug_log "No update needed for $HOST - already points to $PUBLIC_IP"
+    # Create/update timestamp file even when no update is needed
+    TIMESTAMP_FILE="/tmp/last_successful_update"
+    date +%s > "$TIMESTAMP_FILE"
+    debug_log "Updated timestamp file at $TIMESTAMP_FILE (no change needed)"
     continue
   fi
   
@@ -222,6 +226,10 @@ EOF
     --hosted-zone-id "$ZONE_ID" \
     --change-batch file:///tmp/change-$SUB.json > /tmp/route53-output.json 2>&1; then
     debug_log "Successfully updated $HOST to $PUBLIC_IP"
+    # Create a timestamp file after successful update
+    TIMESTAMP_FILE="/tmp/last_successful_update"
+    date +%s > "$TIMESTAMP_FILE"
+    debug_log "Updated timestamp file at $TIMESTAMP_FILE"
     # Add to updated domains list
     UPDATED_DOMAINS="${UPDATED_DOMAINS}${UPDATED_DOMAINS:+,}$SUB"
   else

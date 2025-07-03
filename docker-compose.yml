@@ -2,7 +2,7 @@ services:
 
 ###############################
 #                             #
-#  Network and reverse proxy  #
+#  Network and Security       #
 #                             #
 ###############################
  
@@ -26,32 +26,67 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik_letsencrypt:/letsencrypt
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+      - ./traefik/plugins-local:/plugins-local
     command: ["--configFile=/etc/traefik/traefik.yml"]
     environment:
       - AWS_SHARED_CREDENTIALS_FILE=/run/secrets/AWS_CREDENTIALS
       - AWS_REGION=${AWS_REGION}
+      - CROWDSEC_BOUNCER_KEY=${CROWDSEC_BOUNCER_KEY}
+    healthcheck:
+      test: ["CMD", "sh", "-c", "wget --spider -q http://localhost:8080/dashboard || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       dns-refresher:
         condition: service_healthy
 
+  crowdsec:
+    image: crowdsecurity/crowdsec:latest
+    container_name: crowdsec
+    restart: unless-stopped
+    volumes:
+      - crowdsec_data:/var/lib/crowdsec/data
+      - crowdsec_config:/etc/crowdsec
+      - /var/log:/var/log:ro
+    networks:
+      - proxy
+      - stack
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD", "cscli", "metrics"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
   dns-refresher:
     container_name: dns-refresher
     restart: unless-stopped
-    working_dir: /traefik
+    working_dir: /dns-refresher
     build:
-      context: ./traefik
+      context: ./dns-refresher
       dockerfile: dockerfile/master.dockerfile
     secrets:
       - AWS_CREDENTIALS
     volumes:
-      - ./traefik/update-dns.sh:/app/update-dns.sh:ro
-      - ./traefik/watcher.sh:/app/watcher.sh:ro
-      - ./traefik/dns.env:/app/dns.env:ro
-      - ./traefik/aws.env:/app/aws.env:ro
+      - ./dns-refresher/update-dns.sh:/app/update-dns.sh:ro
+      - ./dns-refresher/watcher.sh:/app/watcher.sh:ro
+      - ./dns-refresher/dns.env:/app/dns.env:ro
     environment:
       - AWS_REGION=${AWS_REGION}
+    healthcheck:
+      test: ["CMD", "sh", "-c", "test $(($(date +%s) - $(cat /tmp/last_successful_update 2>/dev/null || echo 0))) -lt 3600"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+      start_period: 10s
     networks:
       - stack
+
 
   
 ###############################
@@ -64,11 +99,9 @@ services:
     image: mariadb:10.11
     container_name: mariadb
     restart: unless-stopped
-    secrets:
-      - STRONG_PASSWORD
     environment:
-      - MYSQL_ROOT_PASSWORD_FILE=/run/secrets/STRONG_PASSWORD
-      - MYSQL_PASSWORD_FILE=/run/secrets/STRONG_PASSWORD
+      - MYSQL_ROOT_PASSWORD=${STRONG_PASSWORD}
+      - MYSQL_PASSWORD=${STRONG_PASSWORD}
       - MYSQL_USER=${RANDOM_USERNAME}
       - MYSQL_DATABASE=defaultdb
     ports:
@@ -84,9 +117,11 @@ services:
     image: redis:latest
     container_name: redis
     restart: unless-stopped
+    environment:
+      - REDIS_PASSWORD=${STRONG_PASSWORD}
     ports:
       - "127.0.0.1:6001:6001"
-    command: ["redis-server", "--port", "6001", "--requirepass", "${STRONG_PASSWORD_INTERNAL}"]
+    command: ["--port", "6001", "--requirepass", "${STRONG_PASSWORD}"]
     networks:
       - stack
 
@@ -96,8 +131,8 @@ services:
     container_name: mongodb
     restart: unless-stopped
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=${RANDOM_USERNAME_INTERNAL}
-      - MONGO_INITDB_ROOT_PASSWORD=${STRONG_PASSWORD_INTERNAL}
+      - MONGO_INITDB_ROOT_USERNAME=${RANDOM_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${STRONG_PASSWORD}
     ports:
       - "127.0.0.1:6003:6003"
     expose:
@@ -113,8 +148,8 @@ services:
     container_name: postgres
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=${RANDOM_USERNAME_INTERNAL}
-      - POSTGRES_PASSWORD=${STRONG_PASSWORD_INTERNAL}
+      - POSTGRES_USER=${RANDOM_USERNAME}
+      - POSTGRES_PASSWORD=${STRONG_PASSWORD}
       - POSTGRES_DB=defaultdb
     ports:
       - "127.0.0.1:6004:6004"
@@ -150,7 +185,7 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:6011:6011"
-    command: ["node", "./bin/redis-commander", "--port", "6011", "--redis-host", "redis", "--redis-port", "6001", "--redis-password", "${STRONG_PASSWORD_INTERNAL}"]
+    command: ["sh", "-c", "node ./bin/redis-commander --port 6011 --redis-host redis --redis-port 6001 --redis-password ${STRONG_PASSWORD}"]
     depends_on:
       - redis
     networks:
@@ -162,9 +197,9 @@ services:
     container_name: mongo-express
     restart: unless-stopped
     environment:
-    - ME_CONFIG_MONGODB_URL=mongodb://${RANDOM_USERNAME_INTERNAL}:${STRONG_PASSWORD_INTERNAL}@mongodb:6003/
-    - ME_CONFIG_BASICAUTH_USERNAME=${RANDOM_USERNAME_INTERNAL}
-    - ME_CONFIG_BASICAUTH_PASSWORD=${STRONG_PASSWORD_INTERNAL}
+    - ME_CONFIG_MONGODB_URL=mongodb://${RANDOM_USERNAME}:${STRONG_PASSWORD}@mongodb:6003/
+    - ME_CONFIG_BASICAUTH_USERNAME=${RANDOM_USERNAME}
+    - ME_CONFIG_BASICAUTH_PASSWORD=${STRONG_PASSWORD}
     - ME_CONFIG_SITE_BASEURL=/
     ports:
       - "127.0.0.1:6013:8081"
@@ -198,6 +233,8 @@ volumes:
   mariadb_db:
   mongodb_db:
   postgres_db:
+  crowdsec_data:
+  crowdsec_config:
 
 ###############################
 #                             #
@@ -208,11 +245,3 @@ volumes:
 secrets:
   AWS_CREDENTIALS:
     file: ./_secrets/AWS_CREDENTIALS
-  STRONG_PASSWORD:
-    file: ./_secrets/STRONG_PASSWORD
-  STRONG_PASSWORD_SPECIALCHARACTERS:
-    file: ./_secrets/STRONG_PASSWORD_SPECIALCHARACTERS
-  TELEGRAM_BOT_TOKEN:
-    file: ./_secrets/TELEGRAM_BOT_TOKEN
-  TELEGRAM_WEBHOOK_SECRET:
-    file: ./_secrets/TELEGRAM_WEBHOOK_SECRET

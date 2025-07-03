@@ -1,0 +1,10 @@
+http:
+  middlewares:
+    crowdsec:
+      crowdsec-bouncer-traefik-plugin:
+        enabled: true
+        crowdsecLapiKey: "${CROWDSEC_BOUNCER_KEY}"
+        crowdsecLapiScheme: "http"
+        crowdsecLapiHost: "crowdsec:8080"
+        logLevel: "INFO"
+        metricsUpdateIntervalSeconds: 600

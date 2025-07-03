@@ -1,4 +1,12 @@
 entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
   websecure:
     address: ":443"
 
@@ -13,6 +21,9 @@ providers:
   docker:
     network: proxy
     exposedByDefault: false
+  file:
+    directory: "/etc/traefik/dynamic"
+    watch: true
 
 certificatesResolvers:
   letsencrypt:
@@ -24,4 +35,10 @@ certificatesResolvers:
         resolvers:
           - "1.1.1.1:53"
           - "8.8.8.8:53"
+
+experimental:
+  plugins:
+    crowdsec-bouncer-traefik-plugin:
+      moduleName: "github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
+      version: "v0.0.13"
  
