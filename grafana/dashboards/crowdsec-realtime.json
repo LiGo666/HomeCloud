@@ -1,122 +1,356 @@
 {
-  "title": "CrowdSec Realtime Threats",
-  "uid": "crowdsec-realtime",
-  "schemaVersion": 37,
-  "version": 1,
-  "refresh": "5s",
-  "time": {
-    "from": "now-6h",
-    "to": "now"
-  },
-  "panels": [
-    {
-      "type": "table",
-      "title": "Active Bans (live)",
-      "id": 1,
-      "datasource": "Prometheus",
-      "targets": [
+    "annotations": {
+      "list": [
         {
-          "expr": "sum by (source_ip, country_code, as) (cs_decisions_count)",
-          "legendFormat": "{{source_ip}} | {{country_code}} | {{as}}",
-          "refId": "A"
+          "builtIn": 1,
+          "datasource": {
+            "type": "grafana",
+            "uid": "-- Grafana --"
+          },
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "type": "dashboard"
         }
-      ],
-      "transformations": [
-        {
-          "id": "sortBy",
-          "options": {
-            "field": "Value",
-            "desc": true
-          }
-        }
-      ],
-      "options": {
-        "showHeader": true
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 0 }
+      ]
     },
-    {
-      "type": "barchart",
-      "title": "Top Scenarios (24h)",
-      "id": 2,
-      "datasource": "Prometheus",
-      "targets": [
-        {
-          "expr": "topk(10, increase(cs_decisions_new_total[24h]))",
-          "legendFormat": "{{scenario}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 0,
+    "id": 4,
+    "links": [],
+    "panels": [
+      {
+        "datasource": "Prometheus",
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "auto"
+              },
+              "inspect": false
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green"
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": []
         },
-        "overrides": []
-      },
-      "options": {
-        "orientation": "horizontal"
-      },
-      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 10 }
-    },
-    {
-      "type": "timeseries",
-      "title": "Decision Rate (5m)",
-      "id": 3,
-      "datasource": "Prometheus",
-      "targets": [
-        {
-          "expr": "rate(cs_decisions_new_total[5m])",
-          "legendFormat": "Decisions/s",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "ops"
+        "gridPos": {
+          "h": 10,
+          "w": 24,
+          "x": 0,
+          "y": 0
         },
-        "overrides": []
-      },
-      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 10 }
-    },
-    {
-      "type": "geomap",
-      "title": "Hotspots (24h)",
-      "id": 4,
-      "datasource": "Prometheus",
-      "targets": [
-        {
-          "expr": "sum by (country_code) (increase(cs_decisions_new_total[24h]))",
-          "legendFormat": "{{country_code}}",
-          "refId": "A"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
+        "id": 1,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true
         },
-        "overrides": []
-      },
-      "options": {
-        "view": {
-          "id": "world"
-        },
-        "layers": [
+        "pluginVersion": "12.0.2",
+        "targets": [
           {
-            "type": "regions",
-            "name": "Countries",
-            "config": {
-              "location":"country_code"
+            "expr": "sum by (source_ip, country_code, as) (cs_decisions_count)",
+            "legendFormat": "{{source_ip}} | {{country_code}} | {{as}}",
+            "refId": "A"
+          }
+        ],
+        "title": "Active Bans (live)",
+        "transformations": [
+          {
+            "id": "sortBy",
+            "options": {
+              "desc": true,
+              "field": "Value"
             }
           }
-        ]
+        ],
+        "type": "table"
       },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 19 }
-    }
-  ]
-}
+      {
+        "datasource": "Prometheus",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineWidth": 1,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green"
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 9,
+          "w": 12,
+          "x": 0,
+          "y": 10
+        },
+        "id": 2,
+        "options": {
+          "barRadius": 0,
+          "barWidth": 0.97,
+          "fullHighlight": false,
+          "groupWidth": 0.7,
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "orientation": "horizontal",
+          "showValue": "auto",
+          "stacking": "none",
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          },
+          "xTickLabelRotation": 0,
+          "xTickLabelSpacing": 0
+        },
+        "pluginVersion": "12.0.2",
+        "targets": [
+          {
+            "expr": "topk(10, increase(cs_decisions_new_total[24h]))",
+            "legendFormat": "{{scenario}}",
+            "refId": "A"
+          }
+        ],
+        "title": "Top Scenarios (24h)",
+        "type": "barchart"
+      },
+      {
+        "datasource": "Prometheus",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "barWidthFactor": 0.6,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green"
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "ops"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 9,
+          "w": 12,
+          "x": 12,
+          "y": 10
+        },
+        "id": 3,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "12.0.2",
+        "targets": [
+          {
+            "expr": "rate(cs_decisions_new_total[5m])",
+            "legendFormat": "Decisions/s",
+            "refId": "A"
+          }
+        ],
+        "title": "Decision Rate (5m)",
+        "type": "timeseries"
+      },
+      {
+        "datasource": "Prometheus",
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green"
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 17,
+          "w": 7,
+          "x": 0,
+          "y": 19
+        },
+        "id": 4,
+        "options": {
+          "controls": {
+            "mouseWheelZoom": true,
+            "showAttribution": true,
+            "showDebug": false,
+            "showMeasure": false,
+            "showScale": false,
+            "showZoom": true
+          },
+          "layers": [
+            {
+              "config": {
+                "location": "country_code"
+              },
+              "name": "Countries",
+              "type": "regions"
+            }
+          ],
+          "tooltip": {
+            "mode": "details"
+          },
+          "view": {
+            "allLayers": true,
+            "id": "world",
+            "lat": 0,
+            "lon": 0,
+            "zoom": 1
+          }
+        },
+        "pluginVersion": "12.0.2",
+        "targets": [
+          {
+            "expr": "sum by (country_code) (increase(cs_decisions_new_total[24h]))",
+            "legendFormat": "{{country_code}}",
+            "refId": "A"
+          }
+        ],
+        "title": "Hotspots (24h)",
+        "type": "geomap"
+      }
+    ],
+    "preload": false,
+    "refresh": "5s",
+    "schemaVersion": 41,
+    "tags": [],
+    "templating": {
+      "list": []
+    },
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "timezone": "",
+    "title": "CrowdSec Realtime Threats",
+    "uid": "crowdsec-realtime",
+    "version": 1
+  }
