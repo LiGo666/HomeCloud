@@ -40,5 +40,5 @@ experimental:
   plugins:
     crowdsec-bouncer-traefik-plugin:
       moduleName: "github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
-      version: "v0.0.13"
+      version: "v1.4.4"
  
