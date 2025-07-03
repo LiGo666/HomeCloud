@@ -4,9 +4,11 @@ cdn/**
 monitoring/**
 telegram/**
 n8n/**
-RESTORE/**
+_archive/**
+_secrets/**
 .env
 
 # Environment files
 .env*
 n8n/.env
+_secrets/AWS_CREDENTIALS
