@@ -2,6 +2,8 @@ entryPoints:
   web:
     address: ":80"
     http:
+      middlewares:
+        - "crowdsec"
       redirections:
         entryPoint:
           to: websecure
@@ -9,6 +11,9 @@ entryPoints:
           permanent: true
   websecure:
     address: ":443"
+    http:
+      middlewares:
+        - "crowdsec"
 
 log:
   level: "DEBUG"
