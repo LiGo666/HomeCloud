@@ -1,13 +1,11 @@
 http:
 
   middlewares:
-    # Add a middleware to preserve the original X-Forwarded-For header
     preserve-xff:
       headers:
         customRequestHeaders:
           X-Original-Forwarded-For: "{{ .Request.Headers.X-Forwarded-For }}"
 
-    # CrowdSec bouncer middleware
     crowdsec:
       plugin:
         bouncer:
