@@ -32,7 +32,7 @@ services:
     environment:
       - AWS_SHARED_CREDENTIALS_FILE=/run/secrets/AWS_CREDENTIALS
       - AWS_REGION=${AWS_REGION}
-      - CROWDSEC_BOUNCER_KEY=${CROWDSEC_BOUNCER_KEY}
+      - CROWDSEC_BOUNCER_KEY=${CROWDSEC_BOUNCER_KEY_TRAEFIK}
     healthcheck:
       test: ["CMD", "sh", "-c", "wget --spider -q http://localhost:8080/dashboard || exit 1"]
       interval: 10s
@@ -54,6 +54,8 @@ services:
       - ./crowdsec/GeoLite2-City.mmdb:/usr/share/GeoIP/GeoLite2-City.mmdb:ro
     expose:
       - "6060"
+    ports:
+      - "127.0.0.1:9000:8080"
     networks:
       - stack
     healthcheck:
@@ -65,6 +67,20 @@ services:
     depends_on:
       traefik:
         condition: service_healthy
+
+  cs-firewall-bouncer:
+    image: crowdsecurity/cs-firewall-bouncer-iptables:latest
+    container_name: cs-firewall-bouncer
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - /var/run/crowdsec:/var/run/crowdsec:ro
+    environment:
+      - CROWDSEC_LAPI_URL=http://127.0.0.1:9000/
+      - CROWDSEC_LAPI_KEY=${CROWDSEC_BOUNCER_KEY_HOST}
+    depends_on:
+      - crowdsec
+
 
   dns-refresher:
     container_name: dns-refresher
