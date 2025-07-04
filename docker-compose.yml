@@ -43,6 +43,18 @@ services:
       dns-refresher:
         condition: service_healthy
 
+  traefik-whoami:
+    image: traefik/whoami
+    container_name: traefik-whoami
+    profiles: ["traefik-whoami"]
+    networks: [proxy]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`whoami.localhost`)"
+      - "traefik.http.routers.whoami.entrypoints=websecure"
+      - "traefik.http.routers.whoami.tls=true"
+      - "traefik.http.routers.whoami.middlewares=preserve-xff@file,crowdsec@file"
+
   crowdsec:
     image: crowdsecurity/crowdsec:latest
     container_name: crowdsec
@@ -98,7 +110,7 @@ services:
     environment:
       - AWS_REGION=${AWS_REGION}
     healthcheck:
-      test: ["CMD", "sh", "-c", "test $$(($$(date +%s) - $$(cat /tmp/last_successful_update 2>/dev/null || echo 0))) -lt 3600"]
+      test: ["CMD", "sh", "-c", 'test $$(($$(date +%s) - $$(cat /tmp/last_successful_update 2>/dev/null || echo 0))) -lt 3600']
       interval: 1m
       timeout: 10s
       retries: 3

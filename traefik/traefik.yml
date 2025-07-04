@@ -2,8 +2,6 @@ entryPoints:
   web:
     address: ":80"
     http:
-      middlewares:
-        - "crowdsec"
       redirections:
         entryPoint:
           to: websecure
@@ -11,9 +9,7 @@ entryPoints:
           permanent: true
   websecure:
     address: ":443"
-    http:
-      middlewares:
-        - "crowdsec"
+
 
 log:
   level: "DEBUG"
@@ -41,9 +37,9 @@ certificatesResolvers:
           - "1.1.1.1:53"
           - "8.8.8.8:53"
 
+
 experimental:
   plugins:
-    crowdsec-bouncer-traefik-plugin:
-      moduleName: "github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
+    bouncer:
+      moduleName: github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin
       version: "v1.4.4"
- 

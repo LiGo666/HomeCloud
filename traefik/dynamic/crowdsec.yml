@@ -1,10 +1,23 @@
 http:
+
   middlewares:
+    # Add a middleware to preserve the original X-Forwarded-For header
+    preserve-xff:
+      headers:
+        customRequestHeaders:
+          X-Original-Forwarded-For: "{{ .Request.Headers.X-Forwarded-For }}"
+
+    # CrowdSec bouncer middleware
     crowdsec:
-      crowdsec-bouncer-traefik-plugin:
-        enabled: true
-        crowdsecLapiKey: "${CROWDSEC_BOUNCER_KEY}"
-        crowdsecLapiScheme: "http"
-        crowdsecLapiHost: "crowdsec:4002"
-        logLevel: "INFO"
-        metricsUpdateIntervalSeconds: 600
+      plugin:
+        bouncer:
+          enabled: true
+          crowdsecLapiKey: "NjOmsarLRT388yfmKKuHzviHQ04kzmLsg9lR7clSINI"
+          crowdsecLapiScheme: http
+          crowdsecLapiHost: crowdsec:8080
+          crowdsecLapiPath: "/"
+          metricsUpdateIntervalSeconds: 600
+          forwardedHeadersEnabled: true
+          forwardedHeadersNbip: 1
+          trustXFF: true
+          userAgentEnabled: true
